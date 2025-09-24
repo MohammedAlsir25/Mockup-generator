@@ -1,0 +1,5 @@
+{
+  "name": "AI UI Mockup Generator",
+  "description": "An AI-powered platform to generate beautiful UI/UX mockup images from any URL. Describe a website, and the AI will create stunning, professional design mockups.",
+  "requestFramePermissions": []
+}
