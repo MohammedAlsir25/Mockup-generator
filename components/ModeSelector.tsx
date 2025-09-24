@@ -24,7 +24,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({ onSelectMode }) => {
     <div className="max-w-2xl mx-auto mt-10 grid md:grid-cols-2 gap-6">
       <ModeCard
         title="URL Redesign"
-        description="Provide a URL and a screenshot to get four thematic redesigns of your existing site."
+        description="Provide a URL and screenshots to get five unique, professional showcase mockups of your site."
         onClick={() => onSelectMode('url')}
         icon={
           <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -34,7 +34,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({ onSelectMode }) => {
       />
       <ModeCard
         title="Mockup from Screenshots"
-        description="Upload multiple screenshots to generate a single, cohesive mockup combining the best ideas."
+        description="Upload multiple screenshots to generate five distinct, high-quality promotional images."
         onClick={() => onSelectMode('screenshots')}
         icon={
           <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
