@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { onAuthStateChanged, User as FirebaseUser, getAdditionalUserInfo } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db, handleLogin as firebaseLogin, handleSignUp as firebaseSignUp, handleLogout as firebaseLogout, handleGoogleLogin as firebaseGoogleLogin } from './services/firebase';
@@ -61,6 +61,17 @@ const App: React.FC = () => {
   // History state
   const [history, setHistory] = useState<HistoryItem[]>([]);
 
+  // Refs to track state for use in the auth listener without causing re-renders
+  const viewRef = useRef(view);
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
+
+  const postAuthActionRef = useRef(postAuthAction);
+  useEffect(() => {
+    postAuthActionRef.current = postAuthAction;
+  }, [postAuthAction]);
+
   // Check for API key configuration on startup
   if (!isGeminiConfigured() || !isFirebaseConfigured() || !isPaypalConfigured()) {
     return <ConfigurationError />;
@@ -86,67 +97,68 @@ const App: React.FC = () => {
         }, 3000);
     }
     return () => clearInterval(interval);
-}, [isLoading]);
+  }, [isLoading]);
 
 
   useEffect(() => {
+    // This effect should only run once to set up the central auth listener
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         // User is signed in.
         const userDocRef = doc(db, "users", firebaseUser.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          const today = getTodayDateString();
+        try {
+          const userDoc = await getDoc(userDocRef);
+          if (userDoc.exists()) {
+            const data = userDoc.data();
+            const today = getTodayDateString();
+            
+            const plan: 'free' | 'pro' = data.plan === 'pro' ? 'pro' : 'free';
+
+            let downloadCount = Number(data.downloadCount || 0);
+            let lastDownloadDate = ''; 
+
+            if (data.lastDownloadDate) {
+                if (typeof data.lastDownloadDate.toDate === 'function') {
+                    lastDownloadDate = data.lastDownloadDate.toDate().toISOString().split('T')[0];
+                } else {
+                    lastDownloadDate = String(data.lastDownloadDate);
+                }
+            }
+
+            if (plan === 'free' && lastDownloadDate && lastDownloadDate !== today) {
+              downloadCount = 0;
+            }
+
+            const cleanUser: User = {
+              uid: firebaseUser.uid,
+              email: String(data.email || firebaseUser.email || ''),
+              plan: plan,
+              downloadCount: downloadCount,
+              lastDownloadDate: lastDownloadDate,
+            };
+            
+            setUser(cleanUser);
+          }
+          setIsAuthenticated(true);
           
-          // Ensure plan is one of the two allowed values
-          const plan: 'free' | 'pro' = data.plan === 'pro' ? 'pro' : 'free';
-
-          let downloadCount = Number(data.downloadCount || 0);
-          let lastDownloadDate = ''; // Default to a primitive string
-
-          // Safely extract and convert lastDownloadDate, which might be a Firestore Timestamp
-          if (data.lastDownloadDate) {
-              if (typeof data.lastDownloadDate.toDate === 'function') {
-                  // If it's a Timestamp, convert it to a YYYY-MM-DD string for comparison
-                  lastDownloadDate = data.lastDownloadDate.toDate().toISOString().split('T')[0];
-              } else {
-                  // Otherwise, treat it as a string
-                  lastDownloadDate = String(data.lastDownloadDate);
-              }
+          const storedHistory = localStorage.getItem(`downloadHistory_${firebaseUser.uid}`);
+          if (storedHistory) {
+            setHistory(JSON.parse(storedHistory));
           }
 
-          // Reset daily download count for free users if the last download was not today
-          if (plan === 'free' && lastDownloadDate && lastDownloadDate !== today) {
-            downloadCount = 0;
+          // Handle post-auth actions using refs
+          if (postAuthActionRef.current === 'upgrade') {
+            setView('pricing');
+            setPostAuthAction(null);
+          } else if (viewRef.current === 'login' || viewRef.current === 'signup') {
+            setView('generator');
           }
-
-          // Create a new, clean user object with guaranteed primitive values to prevent serialization errors.
-          const cleanUser: User = {
-            uid: firebaseUser.uid,
-            email: String(data.email || firebaseUser.email || ''),
-            plan: plan,
-            downloadCount: downloadCount,
-            lastDownloadDate: lastDownloadDate,
-          };
-          
-          setUser(cleanUser);
-        }
-        setIsAuthenticated(true);
-        
-        // Load history from localStorage
-        const storedHistory = localStorage.getItem(`downloadHistory_${firebaseUser.uid}`);
-        if (storedHistory) {
-          setHistory(JSON.parse(storedHistory));
-        }
-
-        // Handle post-auth actions
-        if (postAuthAction === 'upgrade') {
-          setView('pricing');
-          setPostAuthAction(null);
-        } else if (view === 'login' || view === 'signup') {
-          // After login/signup, go to generator, potentially to see results.
-          setView('generator');
+        } catch (err) {
+            console.error("Error fetching user document from Firestore:", err);
+            // If we can't get the user doc, something is wrong (e.g., Firestore rules).
+            // Log the user out to prevent a broken state and show an error.
+            await firebaseLogout();
+            setError("Failed to retrieve your profile after login. This could be a permissions issue. You have been logged out.");
         }
       } else {
         // User is signed out.
@@ -156,9 +168,9 @@ const App: React.FC = () => {
       }
       setAuthIsLoading(false);
     });
-    // Cleanup subscription on unmount
+    
     return () => unsubscribe();
-  }, [postAuthAction, view]);
+  }, []); // Empty dependency array ensures this runs only once
 
   const resetGeneratorState = useCallback(() => {
     setUrl('');
