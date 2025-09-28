@@ -28,26 +28,26 @@
 /**
  * Your Google Gemini API Key for AI image generation.
  */
-export const GEMINI_API_KEY = "AIzaSyA_cQysTvQoDObq5giQ0gF4wDtKXvU8LwM";
+export const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE";
 
 
 /**
  * Your Firebase project configuration for authentication, database, and storage.
  */
 export const firebaseConfig = {
-  apiKey: "AIzaSyCF_v2QUz4eA81xAFer3la7xhoIAjd0gXs",
-  authDomain: "mockup-generator-78564.firebaseapp.com",
-  projectId: "mockup-generator-78564",
-  storageBucket: "mockup-generator-78564.firebasestorage.app",
-  messagingSenderId: "514284782806",
-  appId: "1:514284782806:web:4e5ea0c6bb2bd471c47577"
+  apiKey: "YOUR_FIREBASE_API_KEY_HERE",
+  authDomain: "YOUR_FIREBASE_AUTH_DOMAIN_HERE",
+  projectId: "YOUR_FIREBASE_PROJECT_ID_HERE",
+  storageBucket: "YOUR_FIREBASE_STORAGE_BUCKET_HERE",
+  messagingSenderId: "YOUR_FIREBASE_MESSAGING_SENDER_ID_HERE",
+  appId: "YOUR_FIREBASE_APP_ID_HERE"
 };
 
 /**
  * Your PayPal Client ID for processing payments.
  * Use your Sandbox Client ID for testing.
  */
-export const PAYPAL_CLIENT_ID = "Ae0QrxxSH-46fRbFjhvhh9muaZQEYkfROFxdN--4wm6MoSVIAy3cgfp5O6B5GoF9S8xBaWzn-T8GOSSo";
+export const PAYPAL_CLIENT_ID = "YOUR_PAYPAL_CLIENT_ID_HERE";
 
 
 
