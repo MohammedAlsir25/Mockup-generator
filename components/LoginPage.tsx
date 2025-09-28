@@ -81,7 +81,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoogleLogin, on
                     message = "Sign-in cancelled. The popup was closed before authentication could complete.";
                     break;
                 case 'auth/unauthorized-domain':
-                    message = `This domain is not authorized for sign-in.\n\nTo fix this, please follow these steps:\n1. Go to your Firebase project console.\n2. Navigate to Authentication > Settings > Authorized domains.\n3. Click "Add domain" and enter the following domain:\n\n${window.location.hostname}`;
+                    message = `This website's domain is not authorized for sign-in.\n\nThis is a required security setting in your Firebase project.\n\nTo fix this, please follow these steps:\n1. Go to your Firebase Console -> Authentication -> Settings tab.\n2. Under 'Authorized domains', click 'Add domain'.\n3. Enter the following domain name exactly as shown:\n\n${window.location.hostname}\n\nAfter adding the domain, please wait a minute and try again.`;
                     break;
                 case 'auth/popup-blocked':
                     message = "Google Sign-In popup was blocked by your browser. Please disable your popup blocker for this site and try again.";
