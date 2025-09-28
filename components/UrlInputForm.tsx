@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { Tooltip } from './Tooltip';
 
 interface UrlInputFormProps {
   url: string;
@@ -12,6 +13,38 @@ interface UrlInputFormProps {
 export const UrlInputForm: React.FC<UrlInputFormProps> = ({ url, setUrl, files, setFiles, onSubmit, isLoading }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [urlError, setUrlError] = useState<string | null>(null);
+
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newUrl = e.target.value;
+    setUrl(newUrl);
+
+    // URL is optional, so if it's empty, clear any errors.
+    if (newUrl.trim() === '') {
+        setUrlError(null);
+        return;
+    }
+    
+    // Add a protocol if it's missing for validation purposes.
+    // This allows users to type "example.com" without it being flagged as invalid.
+    let urlToValidate = newUrl;
+    if (!urlToValidate.startsWith('http://') && !urlToValidate.startsWith('https://')) {
+        urlToValidate = `https://${urlToValidate}`;
+    }
+
+    try {
+        // The URL constructor is a robust way to validate URLs.
+        // We also check if the hostname has a dot, which is a common characteristic
+        // of valid public domain names (e.g., 'example.com' vs 'example').
+        const parsedUrl = new URL(urlToValidate);
+        if (!parsedUrl.hostname.includes('.')) {
+            throw new Error('Invalid hostname');
+        }
+        setUrlError(null);
+    } catch (error) {
+        setUrlError('Please enter a valid URL format.');
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -49,6 +82,7 @@ export const UrlInputForm: React.FC<UrlInputFormProps> = ({ url, setUrl, files, 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (urlError) return;
     onSubmit();
   };
 
@@ -63,11 +97,14 @@ export const UrlInputForm: React.FC<UrlInputFormProps> = ({ url, setUrl, files, 
             id="url-input"
             type="url"
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            onChange={handleUrlChange}
             placeholder="https://example.com"
-            className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 outline-none"
+            className={`w-full px-4 py-3 bg-gray-800 border rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200 outline-none ${urlError ? 'border-red-500' : 'border-gray-600'}`}
             disabled={isLoading}
+            aria-invalid={!!urlError}
+            aria-describedby="url-error"
           />
+          {urlError && <p id="url-error" className="text-red-400 text-sm mt-2">{urlError}</p>}
         </div>
 
         <div>
@@ -130,14 +167,15 @@ export const UrlInputForm: React.FC<UrlInputFormProps> = ({ url, setUrl, files, 
             </div>
           </div>
         )}
-
-        <button
-          type="submit"
-          disabled={isLoading || files.length === 0}
-          className="w-full bg-indigo-600 text-white font-semibold py-3 px-8 rounded-md hover:bg-indigo-500 disabled:bg-indigo-800 disabled:text-gray-400 disabled:cursor-not-allowed transition duration-300 transform hover:scale-105 disabled:scale-100"
-        >
-          {isLoading ? 'Generating Showcase...' : 'Generate Redesigns'}
-        </button>
+        <Tooltip text="Free users get 3 free mockup downloads per day. Upgrade to Pro for unlimited downloads.">
+          <button
+            type="submit"
+            disabled={isLoading || files.length === 0 || !!urlError}
+            className="w-full bg-indigo-600 text-white font-semibold py-3 px-8 rounded-md hover:bg-indigo-500 disabled:bg-indigo-800 disabled:text-gray-400 disabled:cursor-not-allowed transition duration-300 transform hover:scale-105 disabled:scale-100"
+          >
+            {isLoading ? 'Generating Showcase...' : 'Generate Redesigns'}
+          </button>
+        </Tooltip>
       </form>
     </div>
   );

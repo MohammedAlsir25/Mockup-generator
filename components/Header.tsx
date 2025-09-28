@@ -3,7 +3,7 @@ import React from 'react';
 interface HeaderProps {
   isAuthenticated: boolean;
   user: { email: string; plan: 'free' | 'pro'; downloadCount: number } | null;
-  onNavigate: (view: 'generator' | 'pricing' | 'login' | 'signup') => void;
+  onNavigate: (view: 'generator' | 'pricing' | 'login' | 'signup' | 'history') => void;
   onLogout: () => void;
   onGoHome: () => void;
 }
@@ -24,6 +24,12 @@ export const Header: React.FC<HeaderProps> = ({ isAuthenticated, user, onNavigat
           </button>
           {isAuthenticated && user ? (
             <div className="flex items-center space-x-4">
+               <button 
+                onClick={() => onNavigate('history')} 
+                className="font-medium text-gray-300 hover:text-indigo-400 transition-colors duration-200"
+              >
+                History
+              </button>
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-400 hidden sm:inline">{user.email}</span>
                 {user.plan === 'pro' ? (

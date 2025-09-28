@@ -1,12 +1,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
+import { onAuthStateChanged, User as FirebaseUser, getAdditionalUserInfo } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { auth, db, handleLogin as firebaseLogin, handleSignUp as firebaseSignUp, handleLogout as firebaseLogout } from './services/firebase';
+import { auth, db, handleLogin as firebaseLogin, handleSignUp as firebaseSignUp, handleLogout as firebaseLogout, handleGoogleLogin as firebaseGoogleLogin } from './services/firebase';
 
 import { Header } from './components/Header';
 import { UrlInputForm } from './components/UrlInputForm';
 import { Spinner } from './components/Spinner';
-import { generateRedesignMockup, generateMockupFromScreenshots } from './services/geminiService';
+import { generateMockup } from './services/geminiService';
 import { Hero } from './components/Hero';
 import { ImageResultDisplay } from './components/ImageResultDisplay';
 import { ModeSelector } from './components/ModeSelector';
@@ -15,8 +15,10 @@ import { PricingPage } from './components/PricingPage';
 import { LoginPage } from './components/LoginPage';
 import { SignUpPage } from './components/SignUpPage';
 import { PaymentModal } from './components/PaymentModal';
-import { isGeminiConfigured, isFirebaseConfigured } from './config';
+import { isGeminiConfigured, isFirebaseConfigured, isPaypalConfigured } from './config';
 import { ConfigurationError } from './components/ConfigurationError';
+import { HistoryPage } from './components/HistoryPage';
+import { FREE_USER_DAILY_DOWNLOAD_LIMIT } from './constants';
 
 // Helper to read file as base64
 const fileToBase64 = (file: File): Promise<{ data: string; mimeType: string; }> => {
@@ -32,8 +34,12 @@ const fileToBase64 = (file: File): Promise<{ data: string; mimeType: string; }> 
   });
 };
 
-type View = 'generator' | 'pricing' | 'login' | 'signup';
-type User = { uid: string; email: string | null; plan: 'free' | 'pro'; downloadCount: number; };
+// Helper to get today's date in YYYY-MM-DD format
+const getTodayDateString = () => new Date().toISOString().split('T')[0];
+
+type View = 'generator' | 'pricing' | 'login' | 'signup' | 'history';
+type User = { uid: string; email: string | null; plan: 'free' | 'pro'; downloadCount: number; lastDownloadDate?: string; };
+interface HistoryItem { id: string; imageData: string; downloadedAt: string; };
 
 const App: React.FC = () => {
   const [view, setView] = useState<View>('generator');
@@ -50,11 +56,38 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<string[] | null>(null);
+  const [loadingMessage, setLoadingMessage] = useState<string>('');
+
+  // History state
+  const [history, setHistory] = useState<HistoryItem[]>([]);
 
   // Check for API key configuration on startup
-  if (!isGeminiConfigured() || !isFirebaseConfigured()) {
+  if (!isGeminiConfigured() || !isFirebaseConfigured() || !isPaypalConfigured()) {
     return <ConfigurationError />;
   }
+  
+  // Effect for cycling loading messages
+  useEffect(() => {
+    let interval: number;
+    if (isLoading) {
+        const messages = [
+            "Warming up the AI's creative circuits...",
+            "Sketching out initial concepts...",
+            "Analyzing color palettes and layouts...",
+            "Consulting the muses of design...",
+            "Rendering high-resolution mockups...",
+            "Adding the final finishing touches...",
+        ];
+        let messageIndex = 0;
+        setLoadingMessage(messages[messageIndex]); // Set initial message
+        interval = setInterval(() => {
+            messageIndex = (messageIndex + 1) % messages.length;
+            setLoadingMessage(messages[messageIndex]);
+        }, 3000);
+    }
+    return () => clearInterval(interval);
+}, [isLoading]);
+
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
@@ -63,9 +96,49 @@ const App: React.FC = () => {
         const userDocRef = doc(db, "users", firebaseUser.uid);
         const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
-          setUser({ uid: firebaseUser.uid, ...userDoc.data() } as User);
+          const data = userDoc.data();
+          const today = getTodayDateString();
+          
+          // Ensure plan is one of the two allowed values
+          const plan: 'free' | 'pro' = data.plan === 'pro' ? 'pro' : 'free';
+
+          let downloadCount = Number(data.downloadCount || 0);
+          let lastDownloadDate = ''; // Default to a primitive string
+
+          // Safely extract and convert lastDownloadDate, which might be a Firestore Timestamp
+          if (data.lastDownloadDate) {
+              if (typeof data.lastDownloadDate.toDate === 'function') {
+                  // If it's a Timestamp, convert it to a YYYY-MM-DD string for comparison
+                  lastDownloadDate = data.lastDownloadDate.toDate().toISOString().split('T')[0];
+              } else {
+                  // Otherwise, treat it as a string
+                  lastDownloadDate = String(data.lastDownloadDate);
+              }
+          }
+
+          // Reset daily download count for free users if the last download was not today
+          if (plan === 'free' && lastDownloadDate && lastDownloadDate !== today) {
+            downloadCount = 0;
+          }
+
+          // Create a new, clean user object with guaranteed primitive values to prevent serialization errors.
+          const cleanUser: User = {
+            uid: firebaseUser.uid,
+            email: String(data.email || firebaseUser.email || ''),
+            plan: plan,
+            downloadCount: downloadCount,
+            lastDownloadDate: lastDownloadDate,
+          };
+          
+          setUser(cleanUser);
         }
         setIsAuthenticated(true);
+        
+        // Load history from localStorage
+        const storedHistory = localStorage.getItem(`downloadHistory_${firebaseUser.uid}`);
+        if (storedHistory) {
+          setHistory(JSON.parse(storedHistory));
+        }
 
         // Handle post-auth actions
         if (postAuthAction === 'upgrade') {
@@ -79,6 +152,7 @@ const App: React.FC = () => {
         // User is signed out.
         setUser(null);
         setIsAuthenticated(false);
+        setHistory([]); // Clear history on logout
       }
       setAuthIsLoading(false);
     });
@@ -117,7 +191,25 @@ const App: React.FC = () => {
       email: firebaseUser.email,
       plan: 'free',
       downloadCount: 0,
+      lastDownloadDate: '', // Initialize last download date
     });
+    // onAuthStateChanged will handle the rest
+  };
+
+  const handleGoogleLogin = async (): Promise<void> => {
+    const userCredential = await firebaseGoogleLogin();
+    const additionalInfo = getAdditionalUserInfo(userCredential);
+    
+    // If it's a new user, create their document in Firestore
+    if (additionalInfo?.isNewUser) {
+      const firebaseUser = userCredential.user;
+      await setDoc(doc(db, "users", firebaseUser.uid), {
+        email: firebaseUser.email,
+        plan: 'free',
+        downloadCount: 0,
+        lastDownloadDate: '',
+      });
+    }
     // onAuthStateChanged will handle the rest
   };
   
@@ -146,12 +238,33 @@ const App: React.FC = () => {
     setView('generator');
   };
   
-  const handleDownloadSuccess = async () => {
-    if (user && user.plan === 'free') {
-      const newCount = user.downloadCount + 1;
-      const userDocRef = doc(db, "users", user.uid);
-      await updateDoc(userDocRef, { downloadCount: newCount });
-      setUser({ ...user, downloadCount: newCount }); // Update local state immediately
+  const handleDownloadSuccess = async (imageBase64: string) => {
+    if (user) {
+      // Update daily download count for free users in Firestore
+      if (user.plan === 'free') {
+        const today = getTodayDateString();
+        const newCount = (user.lastDownloadDate === today) ? user.downloadCount + 1 : 1;
+        
+        if (newCount <= FREE_USER_DAILY_DOWNLOAD_LIMIT) {
+          const userDocRef = doc(db, "users", user.uid);
+          await updateDoc(userDocRef, { 
+            downloadCount: newCount,
+            lastDownloadDate: today,
+          });
+          setUser({ ...user, downloadCount: newCount, lastDownloadDate: today });
+        }
+      }
+
+      // Save to localStorage history
+      const newHistoryItem: HistoryItem = {
+        id: new Date().toISOString() + Math.random(), // Simple unique ID
+        imageData: imageBase64,
+        downloadedAt: new Date().toISOString(),
+      };
+      // Prepend to show the latest first
+      const updatedHistory = [newHistoryItem, ...history];
+      setHistory(updatedHistory);
+      localStorage.setItem(`downloadHistory_${user.uid}`, JSON.stringify(updatedHistory));
     }
   };
 
@@ -167,36 +280,7 @@ const App: React.FC = () => {
     setError(null);
   }, []);
 
-  const handleUrlRedesign = useCallback(async () => {
-    if (screenshotFiles.length === 0) {
-      setError('Please upload at least one screenshot of your website.');
-      return;
-    }
-    
-    setIsLoading(true);
-    setError(null);
-    setGeneratedImages(null);
-
-    try {
-        const imageParts = await Promise.all(
-            screenshotFiles.map(async (file) => {
-                const { data, mimeType } = await fileToBase64(file);
-                return {
-                    inlineData: { data, mimeType },
-                };
-            })
-        );
-      const images = await generateRedesignMockup(url, imageParts);
-      setGeneratedImages(images);
-    } catch (err) {
-      console.error(err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred during image generation.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [url, screenshotFiles]);
-
-  const handleScreenshotsMockup = useCallback(async () => {
+  const handleGenerateMockup = useCallback(async () => {
     if (screenshotFiles.length === 0) {
         setError('Please upload at least one screenshot.');
         return;
@@ -207,15 +291,13 @@ const App: React.FC = () => {
 
     try {
         const imageParts = await Promise.all(
-            screenshotFiles.map(async (file) => {
-                const { data, mimeType } = await fileToBase64(file);
-                return {
-                    inlineData: { data, mimeType },
-                };
-            })
+            screenshotFiles.map(file => fileToBase64(file))
         );
-
-        const images = await generateMockupFromScreenshots(imageParts);
+        
+        const images = await generateMockup(imageParts.map(part => ({
+            inlineData: { data: part.data, mimeType: part.mimeType }
+        })));
+        
         setGeneratedImages(images);
     } catch (err) {
         console.error(err);
@@ -226,22 +308,24 @@ const App: React.FC = () => {
   }, [screenshotFiles]);
 
   const renderContent = () => {
+    // Show a skeleton loader while auth state is being determined
     if (authIsLoading) {
-        return (
-            <div className="text-center mt-20">
-                <Spinner />
-                <p className="text-lg text-indigo-400 mt-4">Loading Application...</p>
-            </div>
-        );
+      return (
+          <div className="text-center mt-20">
+              <Spinner />
+          </div>
+      );
     }
       
     switch (view) {
       case 'login':
-        return <LoginPage onLogin={handleLogin} onNavigate={handleNavigate} />;
+        return <LoginPage onLogin={handleLogin} onGoogleLogin={handleGoogleLogin} onNavigate={handleNavigate} />;
       case 'signup':
-        return <SignUpPage onSignUp={handleSignUp} onNavigate={handleNavigate} />;
+        return <SignUpPage onSignUp={handleSignUp} onGoogleLogin={handleGoogleLogin} onNavigate={handleNavigate} />;
       case 'pricing':
         return <PricingPage onUpgrade={handleUpgrade} />;
+      case 'history':
+        return <HistoryPage history={history} onGoHome={handleGoHome} />;
       case 'generator':
       default:
         return (
@@ -271,7 +355,7 @@ const App: React.FC = () => {
                 setUrl={setUrl}
                 files={screenshotFiles}
                 setFiles={setScreenshotFiles}
-                onSubmit={handleUrlRedesign}
+                onSubmit={handleGenerateMockup}
                 isLoading={isLoading}
                 />
             )}
@@ -280,7 +364,7 @@ const App: React.FC = () => {
                 <ScreenshotInputForm
                     files={screenshotFiles}
                     setFiles={setScreenshotFiles}
-                    onSubmit={handleScreenshotsMockup}
+                    onSubmit={handleGenerateMockup}
                     isLoading={isLoading}
                 />
             )}
@@ -289,7 +373,7 @@ const App: React.FC = () => {
               <div className="text-center mt-12">
                 <Spinner />
                 <p className="text-lg text-indigo-400 mt-4 animate-pulse">
-                  {mode === 'url' ? 'Analyzing your screenshots & generating showcase mockups...' : 'Synthesizing screenshots & generating new mockups...'}
+                  {loadingMessage}
                 </p>
               </div>
             )}
@@ -307,7 +391,7 @@ const App: React.FC = () => {
                     <h2 className="text-3xl font-bold">
                     Your AI-Generated Mockups
                     </h2>
-                    {!isAuthenticated && <p className="text-yellow-400 mt-2">Sign up to view your results in high resolution and download your first mockup for free!</p>}
+                    {!isAuthenticated && <p className="text-yellow-400 mt-2">Sign up to view your results in high resolution and download your first mockups for free!</p>}
                 </div>
                 <ImageResultDisplay
                   images={generatedImages}
@@ -323,6 +407,7 @@ const App: React.FC = () => {
     }
   };
 
+  // Render header/footer shell immediately for better perceived performance
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 font-sans flex flex-col">
       <Header 

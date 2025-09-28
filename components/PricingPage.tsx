@@ -37,7 +37,7 @@ export const PricingPage: React.FC<PricingPageProps> = ({ onUpgrade }) => {
           <p className="text-4xl font-bold mb-6">$0 <span className="text-lg font-medium text-gray-400">/ month</span></p>
           <ul className="space-y-4 mb-8 text-gray-300">
             <Feature>Unlimited Generations</Feature>
-            <Feature>1 Free Mockup Download</Feature>
+            <Feature>3 Free Mockup Downloads per day</Feature>
             <Feature>Access to all mockup styles</Feature>
             <Feature>High-resolution PNG downloads</Feature>
           </ul>

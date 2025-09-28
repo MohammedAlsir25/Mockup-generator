@@ -15,7 +15,7 @@ export const ConfigurationError: React.FC = () => {
         </div>
 
         <p className="text-gray-300 mb-6">
-          This app requires API keys for both Google Gemini (for AI) and Firebase (for user accounts). You need to add them to the <code className="bg-gray-700 text-yellow-300 px-1.5 py-1 rounded-md text-sm font-mono">config.ts</code> file in your project's source code.
+          This app requires API keys for Google Gemini, Firebase, and PayPal. You need to add them to the <code className="bg-gray-700 text-yellow-300 px-1.5 py-1 rounded-md text-sm font-mono">config.ts</code> file in your project's source code.
         </p>
 
         <div className="space-y-4">
@@ -41,6 +41,18 @@ export const ConfigurationError: React.FC = () => {
                     className="inline-block bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-500 transition duration-300 text-sm"
                 >
                     Go to Firebase Console
+                </a>
+            </div>
+             <div className="bg-gray-900/50 p-4 rounded-lg">
+                <h2 className="font-semibold text-lg text-indigo-300 mb-2">3. Get PayPal Client ID</h2>
+                <p className="text-sm text-gray-400 mb-3">This key is required to process payments for the Pro plan.</p>
+                <a 
+                    href="https://developer.paypal.com/developer/applications/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-block bg-indigo-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-indigo-500 transition duration-300 text-sm"
+                >
+                    Go to PayPal Developer Dashboard
                 </a>
             </div>
         </div>

@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { Tooltip } from './Tooltip';
 
 interface ScreenshotInputFormProps {
   files: File[];
@@ -114,13 +115,15 @@ export const ScreenshotInputForm: React.FC<ScreenshotInputFormProps> = ({ files,
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={isLoading || files.length === 0}
-          className="w-full bg-indigo-600 text-white font-semibold py-3 px-8 rounded-md hover:bg-indigo-500 disabled:bg-indigo-800 disabled:text-gray-400 disabled:cursor-not-allowed transition duration-300 transform hover:scale-105 disabled:scale-100"
-        >
-          {isLoading ? 'Generating Mockup...' : 'Generate Mockup'}
-        </button>
+        <Tooltip text="Free users get 3 free mockup downloads per day. Upgrade to Pro for unlimited downloads.">
+          <button
+            type="submit"
+            disabled={isLoading || files.length === 0}
+            className="w-full bg-indigo-600 text-white font-semibold py-3 px-8 rounded-md hover:bg-indigo-500 disabled:bg-indigo-800 disabled:text-gray-400 disabled:cursor-not-allowed transition duration-300 transform hover:scale-105 disabled:scale-100"
+          >
+            {isLoading ? 'Generating Mockup...' : 'Generate Mockup'}
+          </button>
+        </Tooltip>
       </form>
     </div>
   );

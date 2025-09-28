@@ -4,6 +4,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  GoogleAuthProvider,
+  signInWithPopup,
   UserCredential
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
@@ -12,6 +14,9 @@ import { firebaseConfig } from '../config';
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
+// Initialize Google Auth Provider
+const googleProvider = new GoogleAuthProvider();
 
 // Get Firebase services
 export const auth = getAuth(app);
@@ -29,4 +34,8 @@ export const handleLogin = (email: string, password: string): Promise<UserCreden
 
 export const handleLogout = (): Promise<void> => {
   return signOut(auth);
+};
+
+export const handleGoogleLogin = (): Promise<UserCredential> => {
+  return signInWithPopup(auth, googleProvider);
 };
