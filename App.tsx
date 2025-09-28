@@ -110,31 +110,37 @@ const App: React.FC = () => {
           const userDoc = await getDoc(userDocRef);
           if (userDoc.exists()) {
             const data = userDoc.data();
-            const today = getTodayDateString();
             
-            const plan: 'free' | 'pro' = data.plan === 'pro' ? 'pro' : 'free';
+            // Sanitize data from Firestore to prevent circular reference errors
+            const plan: 'free' | 'pro' = String(data.plan || 'free') === 'pro' ? 'pro' : 'free';
+            const downloadCount = Number(data.downloadCount || 0);
+            const email = String(data.email || firebaseUser.email || '');
 
-            let downloadCount = Number(data.downloadCount || 0);
-            let lastDownloadDate = ''; 
-
+            let lastDownloadDate = '';
             if (data.lastDownloadDate) {
+                // Firestore Timestamps have a toDate method
                 if (typeof data.lastDownloadDate.toDate === 'function') {
                     lastDownloadDate = data.lastDownloadDate.toDate().toISOString().split('T')[0];
                 } else {
+                    // Handle cases where it might already be a string or other type
                     lastDownloadDate = String(data.lastDownloadDate);
                 }
             }
 
-            if (plan === 'free' && lastDownloadDate && lastDownloadDate !== today) {
-              downloadCount = 0;
-            }
+            const today = getTodayDateString();
+            let finalDownloadCount = downloadCount;
 
+            // Reset download count if it's a new day for a free user
+            if (plan === 'free' && lastDownloadDate && lastDownloadDate !== today) {
+              finalDownloadCount = 0;
+            }
+            
             const cleanUser: User = {
               uid: firebaseUser.uid,
-              email: String(data.email || firebaseUser.email || ''),
+              email: email,
               plan: plan,
-              downloadCount: downloadCount,
-              lastDownloadDate: lastDownloadDate,
+              downloadCount: finalDownloadCount,
+              lastDownloadDate: (plan === 'free' && lastDownloadDate !== today) ? '' : lastDownloadDate,
             };
             
             setUser(cleanUser);

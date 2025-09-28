@@ -6,7 +6,8 @@ import {
   signOut,
   GoogleAuthProvider,
   signInWithPopup,
-  UserCredential
+  UserCredential,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
@@ -38,4 +39,8 @@ export const handleLogout = (): Promise<void> => {
 
 export const handleGoogleLogin = (): Promise<UserCredential> => {
   return signInWithPopup(auth, googleProvider);
+};
+
+export const handlePasswordReset = (email: string): Promise<void> => {
+  return sendPasswordResetEmail(auth, email);
 };

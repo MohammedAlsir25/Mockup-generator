@@ -37,30 +37,22 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onSignUp, onGoogleLogin,
     try {
       await onSignUp(email, password);
     } catch (err: any) {
-      console.error("Firebase SignUp Error:", err); // Log the full error for debugging
-      let message = 'An unexpected error occurred. Please try again.';
-      if (err.code) {
-        switch (err.code) {
-          case 'auth/email-already-in-use':
-            message = 'This email address is already in use.';
-            break;
-          case 'auth/weak-password':
-            message = 'Password is too weak. It should be at least 6 characters.';
-            break;
-          case 'auth/operation-not-allowed':
-            message = "Sign up failed. Please ensure 'Email/Password' sign-in is enabled in your Firebase project's Authentication settings.";
-            break;
-          case 'auth/invalid-api-key':
-            message = "Sign up failed: The API key in your `firebaseConfig` is invalid. Please double-check it in `config.ts`.";
-            break;
-          case 'auth/network-request-failed':
-            message = "Network error. Please check your internet connection and ensure your Firebase domain is not blocked.";
-            break;
-          default:
-            message = `An unknown error occurred. (Code: ${err.code})`;
-            break;
-        }
+      console.error("Firebase SignUp Error:", err);
+      let message = `An unknown error occurred. (Code: ${err.code || 'unknown'})`;
+      const code = err.code;
+
+      if (code === 'auth/email-already-in-use') {
+        message = 'This email address is already in use.';
+      } else if (code === 'auth/weak-password') {
+        message = 'Password is too weak. It should be at least 6 characters.';
+      } else if (code === 'auth/operation-not-allowed') {
+        message = "Sign up failed. Please ensure 'Email/Password' sign-in is enabled in your Firebase project's Authentication settings.";
+      } else if (code === 'auth/invalid-api-key') {
+        message = "Sign up failed: The API key in your `firebaseConfig` is invalid. Please double-check it in `config.ts`.";
+      } else if (code === 'auth/network-request-failed') {
+        message = "Network error. Please check your internet connection and ensure your Firebase domain is not blocked.";
       }
+      
       setError(message);
     } finally {
       setIsLoading(false);
@@ -74,29 +66,23 @@ export const SignUpPage: React.FC<SignUpPageProps> = ({ onSignUp, onGoogleLogin,
         await onGoogleLogin();
     } catch (err: any) {
         console.error("Google Sign-In Error:", err);
-        let message = "An unexpected error occurred during Google Sign-In. Please try again.";
-        if (err.code) {
-            switch(err.code) {
-                case 'auth/popup-closed-by-user':
-                    message = "Sign-in cancelled. The popup was closed before authentication could complete.";
-                    break;
-                case 'auth/unauthorized-domain':
-                    message = `This website's domain is not authorized for sign-in.\n\nThis is a required security setting in your Firebase project.\n\nTo fix this, please follow these steps:\n1. Go to your Firebase Console -> Authentication -> Settings tab.\n2. Under 'Authorized domains', click 'Add domain'.\n3. Enter the following domain name exactly as shown:\n\n${window.location.hostname}\n\nAfter adding the domain, please wait a minute and try again.`;
-                    break;
-                case 'auth/popup-blocked':
-                    message = "Google Sign-In popup was blocked by your browser. Please disable your popup blocker for this site and try again.";
-                    break;
-                case 'auth/internal-error':
-                    message = "An internal authentication error occurred. This can happen if the API key has restrictions. Please check your Google Cloud Console to ensure your API key has no HTTP referrer restrictions, or that they are configured correctly for this domain.";
-                    break;
-                case 'auth/network-request-failed':
-                    message = "A network error occurred. Please check your internet connection or any browser extensions (like ad-blockers) that might be interfering with the request.";
-                    break;
-                default:
-                    message = `An unknown error occurred. (Code: ${err.code})`;
-                    break;
-            }
+        let message = `An unknown error occurred. (Code: ${err.code || 'unknown'})`;
+        const code = err.code;
+
+        if (code === 'auth/operation-not-allowed') {
+            message = "Google Sign-In is not enabled for this project. Please go to your Firebase Console -> Authentication -> Sign-in method, and enable the 'Google' provider.";
+        } else if (code === 'auth/popup-closed-by-user') {
+            message = "Sign-in cancelled. The popup was closed before authentication could complete.";
+        } else if (code === 'auth/unauthorized-domain') {
+            message = `This website's domain is not authorized for sign-in.\n\nThis is a required security setting in your Firebase project.\n\nTo fix this, please follow these steps:\n1. Go to your Firebase Console -> Authentication -> Settings tab.\n2. Under 'Authorized domains', click 'Add domain'.\n3. Enter the following domain name exactly as shown:\n\n${window.location.hostname}\n\nAfter adding the domain, please wait a minute and try again.`;
+        } else if (code === 'auth/popup-blocked') {
+            message = "Google Sign-In popup was blocked by your browser. Please disable your popup blocker for this site and try again.";
+        } else if (code === 'auth/internal-error') {
+            message = "An internal authentication error occurred. This can happen if the API key has restrictions. Please check your Google Cloud Console to ensure your API key has no HTTP referrer restrictions, or that they are configured correctly for this domain.";
+        } else if (code === 'auth/network-request-failed') {
+            message = "A network error occurred. Please check your internet connection or any browser extensions (like ad-blockers) that might be interfering with the request.";
         }
+        
         setError(message);
     } finally {
         setIsGoogleLoading(false);
