@@ -1,53 +1,84 @@
 // =================================================================================
-// IMPORTANT: ACTION REQUIRED
+// IMPORTANT: ACTION REQUIRED - SETUP YOUR API KEYS
 // =================================================================================
-// This file holds your secret API keys.
+// This file holds your secret API keys configuration.
 // You must replace the placeholder text with your actual keys for the app to work.
 //
-// HOW TO GET YOUR KEYS:
-//
-// 1. GEMINI_API_KEY:
-//    - Go to Google AI Studio: https://aistudio.google.com/app/apikey
-//    - Create and copy your API key.
-//
-// 2. firebaseConfig:
-//    - Go to your Firebase project settings: https://console.firebase.google.com/
-//    - In the "General" tab, find your web app's config object.
-//    - Copy the values for each key (apiKey, authDomain, etc.).
-//
-// 3. PAYPAL_CLIENT_ID:
-//    - Go to the PayPal Developer Dashboard: https://developer.paypal.com/developer/applications/
-//    - Create a REST API app to get your "Client ID". Use the Sandbox ID for testing.
-//
-// SECURITY WARNING:
+// ⚠️  SECURITY WARNING:
 // Do NOT commit this file with your actual keys to a public repository.
-// Use a .gitignore file to exclude it from version control.
+// Use environment variables instead! See setup instructions below.
 // =================================================================================
 
+/**
+ * SETUP INSTRUCTIONS - FOLLOW THESE STEPS:
+ * 
+ * 1. GET GOOGLE GEMINI API KEY
+ *    This key allows the app to generate images.
+ *    - Go to Google AI Studio: https://aistudio.google.com/app/apikey
+ *    - Click "Get API Key" → "Create API key in new project"
+ *    - Copy your API key
+ * 
+ * 2. GET FIREBASE CONFIGURATION
+ *    This is needed for user login and database features.
+ *    - Go to Firebase Console: https://console.firebase.google.com/
+ *    - Create a new project or select existing one
+ *    - Go to Project Settings → "Your apps" section
+ *    - Click on your web app to see the config object
+ *    - Copy all the configuration values (apiKey, authDomain, etc.)
+ * 
+ * 3. GET PAYPAL CLIENT ID
+ *    This key is required to process payments for the Pro plan.
+ *    - Go to PayPal Developer Dashboard: https://developer.paypal.com/developer/applications/
+ *    - Create a REST API app to get your "Client ID"
+ *    - Use the Sandbox Client ID for testing
+ * 
+ * RECOMMENDED: USE ENVIRONMENT VARIABLES
+ * =====================================
+ * Instead of hardcoding keys here, use environment variables:
+ * 
+ * 1. Create a .env.local file in your project root (add to .gitignore):
+ *    VITE_GEMINI_API_KEY=your_actual_gemini_key_here
+ *    VITE_FIREBASE_API_KEY=your_actual_firebase_key_here
+ *    VITE_FIREBASE_AUTH_DOMAIN=your_firebase_auth_domain
+ *    VITE_FIREBASE_PROJECT_ID=your_project_id
+ *    VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+ *    VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+ *    VITE_FIREBASE_APP_ID=your_app_id
+ *    VITE_PAYPAL_CLIENT_ID=your_paypal_client_id
+ * 
+ * 2. The config below will automatically read from these variables
+ * 
+ * 3. Add .env.local to your .gitignore file:
+ *    .env.local
+ *    .env.*.local
+ */
 
 /**
  * Your Google Gemini API Key for AI image generation.
+ * Reads from environment variable: VITE_GEMINI_API_KEY
  */
-export const GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE";
+export const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "YOUR_GEMINI_API_KEY_HERE";
 
 
 /**
  * Your Firebase project configuration for authentication, database, and storage.
+ * Reads from environment variables: VITE_FIREBASE_*
  */
 export const firebaseConfig = {
-  apiKey: "YOUR_FIREBASE_API_KEY_HERE",
-  authDomain: "YOUR_FIREBASE_AUTH_DOMAIN_HERE",
-  projectId: "YOUR_FIREBASE_PROJECT_ID_HERE",
-  storageBucket: "YOUR_FIREBASE_STORAGE_BUCKET_HERE",
-  messagingSenderId: "YOUR_FIREBASE_MESSAGING_SENDER_ID_HERE",
-  appId: "YOUR_FIREBASE_APP_ID_HERE"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "YOUR_FIREBASE_API_KEY_HERE",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "YOUR_FIREBASE_AUTH_DOMAIN_HERE",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "YOUR_FIREBASE_PROJECT_ID_HERE",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "YOUR_FIREBASE_STORAGE_BUCKET_HERE",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "YOUR_FIREBASE_MESSAGING_SENDER_ID_HERE",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "YOUR_FIREBASE_APP_ID_HERE"
 };
 
 /**
  * Your PayPal Client ID for processing payments.
  * Use your Sandbox Client ID for testing.
+ * Reads from environment variable: VITE_PAYPAL_CLIENT_ID
  */
-export const PAYPAL_CLIENT_ID = "YOUR_PAYPAL_CLIENT_ID_HERE";
+export const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || "YOUR_PAYPAL_CLIENT_ID_HERE";
 
 
 
